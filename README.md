@@ -1,7 +1,7 @@
-# StackPy
+# StackMaster
 *A collection of methods for data stacking*
 
-![plot1](/figs/stackpy_logo.png)
+![plot1](/figs/stackmaster_logo.png)
 
 ## Introduction
 A collection of methods for stacking of generic time series data.
@@ -14,19 +14,15 @@ This package is under active development. The currently available modules are li
 2. `core`: This module contains core stacking functions.
 
 ## Installation
-1. Install `stackpy` package functions using `pip`
+1. Install `stackmaster` package functions using `pip`
 
 ```
-$ pip install stackpy
+$ pip install stackmaster
 ```
 
-This step will install the **StackPy** package. The modules would then be imported under any working directory.
+This step will install the **StackMaster** package. The modules would then be imported under any working directory.
 
 2. Install with local copy:
-```
-$ conda create -n stackpy -c conda-forge jupyter numpy scipy pandas python
-$ conda activate stackpy
-```
 
 `cd` to the directory you want to save the package files. Then run:
 
@@ -34,19 +30,19 @@ $ conda activate stackpy
 $ pip install .
 ```
 
-1. Test the installation
+## Test the installation
 
-Run the following commands to test your installation, under the root directory of StackPy.
+Run the following commands to test your installation, under the root directory of StackMaster.
 
 ```python
 iimport os,pickle
 import numpy as np
 import matplotlib.pyplot as plt
-from stackpy.core import stack
+from stackmaster.core import stack
 from scipy.signal import sosfiltfilt, butter
 
 dataroot='./data'
-dfile=dataroot+"/stackpy_testdataset.pk"
+dfile=dataroot+"/stackmaster_testdataset.pk"
 d=pickle.load(open(dfile,'rb'))
 
 scale=60
@@ -87,11 +83,11 @@ You should get the following plot:
 
 
 ## Tutorials on key functionalities
-See https://github.com/xtyangpsp/StackPy for tutorials and more detailed descriptions.
+See https://github.com/xtyangpsp/StackMaster for tutorials and more detailed descriptions.
 
 
 ## Contribute
-Any bugs and ideas are welcome. Please file an issue through GitHub https://github.com/xtyangpsp/StackPy.
+Any bugs and ideas are welcome. Please file an issue through GitHub https://github.com/xtyangpsp/StackMaster.
 
 
 ## References

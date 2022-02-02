@@ -11,14 +11,14 @@ long_description = (here / 'description.md').read_text(encoding='utf-8')
 # Fields marked as "Optional" may be commented out.
 version='1.0.0'
 setup(
-    name='stackpy',
+    name='stackmaster',
     version=version,
     description='A collection of methods for data stacking',
     author='Xiaotao Yang',
     author_email='stcyang@gmail.com',
     maintainer='Xiaotao Yang',
     maintainer_email='stcyang@gmail.com',
-    download_url='https://github.com/xtyangpsp/StackPy/archive/refs/tags/v'+version+'.tar.gz',
+    download_url='https://github.com/xtyangpsp/StackMaster/archive/refs/tags/v'+version+'.tar.gz',
 
     # This is an optional longer description of your project that represents
     # the body of text which users will see when they visit PyPI.
@@ -43,7 +43,7 @@ setup(
     long_description_content_type='text/markdown',  # Optional (see note above)
 
     # This should be a valid link to your project's main homepage.
-    url='https://github.com/xtyangpsp/StackPy',  # Optional
+    url='https://github.com/xtyangpsp/StackMaster',  # Optional
 
     # Classifiers help users find your project by categorizing it.
     #
@@ -87,7 +87,7 @@ setup(
     #
     #packages=find_packages(where='src'),  # Required
 
-    packages=['stackpy'],
+    packages=['stackmaster'],
     include_package_data = True,
     package_data={"":["data","figs","notebooks"]},
     # Specify which Python versions you support. In contrast to the
