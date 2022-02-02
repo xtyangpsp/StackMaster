@@ -52,6 +52,12 @@ def stack(d,method,par=None):
     #
     return ds
 
+def seisstack(d,method,par=None):
+    """
+    This is the same as stack(), to be compatible with old call in SeisGo as seisstack().
+    """
+    return stack(d,method=method,par=par)
+
 def robust(d,epsilon=1E-5,maxstep=10,win=None,stat=False):
     """
     this is a robust stacking algorithm described in Pavlis and Vernon 2010. Generalized

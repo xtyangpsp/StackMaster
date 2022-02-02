@@ -105,9 +105,7 @@ setup(
     install_requires=['numpy',
                         'scipy',
                         'pandas',
-                        'obspy',
                         'pyasdf',
-                        'numba',
                         'tslearn',
                         'stockwell'
         ]
