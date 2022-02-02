@@ -45,7 +45,7 @@ import matplotlib.pyplot as plt
 from stackpy.core import stack
 from scipy.signal import sosfiltfilt, butter
 
-dataroot='../data'
+dataroot='./data'
 dfile=dataroot+"/stackpy_testdataset.pk"
 d=pickle.load(open(dfile,'rb'))
 
