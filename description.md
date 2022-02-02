@@ -23,10 +23,6 @@ $ pip install stackpy
 This step will install the **StackPy** package. The modules would then be imported under any working directory. 
 
 2. Install with local copy:
-```
-$ conda create -n stackpy -c conda-forge jupyter numpy scipy pandas python
-$ conda activate stackpy
-```
 
 `cd` to the directory you want to save the package files. Then run:
 
@@ -34,7 +30,7 @@ $ conda activate stackpy
 $ pip install .
 ```
 
-1. Test the installation
+3. Test the installation
 
 Run the following commands to test your installation.
 
