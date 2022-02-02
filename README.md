@@ -39,33 +39,35 @@ $ pip install .
 Run the following commands to test your installation, under the root directory of StackPy.
 
 ```python
-import os,pickle
+iimport os,pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from stackpy.core import stack
 from scipy.signal import sosfiltfilt, butter
 
-dataroot='./data'
+dataroot='../data'
 dfile=dataroot+"/stackpy_testdataset.pk"
 d=pickle.load(open(dfile,'rb'))
 
-sos=butter(4,[0.05,0.5],fs=1/dt,btype="bandpass",output='sos')
-plt.figure(figsize=(10,5))
-scale=40
+scale=60
 data,dt,lag,d_id=[d["data"],d["dt"],d['lag'],d['id']]
 tx=np.arange(-lag,lag+0.5*dt,dt)
 extent=[-lag,lag,data.shape[0],0]
 dn=data.copy()
+
+sos=butter(4,[0.05,0.5],fs=1/dt,btype="bandpass",output='sos')
 
 stack_method="robust"
 
 for i in range(data.shape[0]):
     dn[i,:]=sosfiltfilt(sos,data[i,:]/np.max(np.abs(data[i,:])))
 
-plt.imshow(dn,extent=extent,cmap="seismic",aspect="auto",alpha=0.7)
+## plot
+plt.figure(figsize=(10,5),facecolor="w")
+plt.imshow(dn,extent=extent,cmap="seismic",aspect="auto")
 
 dstack=stack(dn,method=stack_method)
-plt.plot(tx,scale*dstack+0.25*data.shape[0],'k',lw=2,label=stack_method)
+plt.plot(tx,scale*dstack+0.5*data.shape[0],'k',lw=2,label=stack_method)
 plt.vlines(0,0,data.shape[0],'k')
 plt.xlim([-200,200])
 plt.ylim([0,data.shape[0]])
