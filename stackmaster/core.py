@@ -26,7 +26,7 @@ def stack(d,method,par=None):
     if method not in method_list:
         raise ValueError("$s not recoganized. use one of $s"%(method,str(method_list)))
     par0={"axis":0,"p":2,"g":1,"cc_min":0.0,"epsilon":1E-5,"maxstep":10,
-            "win":None,"stat":False,"t":0.75,'plot':False,'normalize':True}  #stat: if true, will return statistics.
+            "win":None,"stat":False,"t":0.75,'plot':False,'normalize':True,'ref':None}  #stat: if true, will return statistics.
     if par is None:
         par=par0
     else:
@@ -39,14 +39,15 @@ def stack(d,method,par=None):
     elif method.lower() == 'tfpws':
         ds = tfpws(d,p=par['p'])
     elif method.lower() == 'robust':
-        ds = robust(d,epsilon=par['epsilon'],maxstep=par['maxstep'],win=par["win"],stat=par['stat'])
+        ds = robust(d,epsilon=par['epsilon'],maxstep=par['maxstep'],win=par["win"],
+                stat=par['stat'],ref=par['ref'])
     elif method.lower() == 'acf':
         ds = adaptive_filter(d,g=par['g'])
     elif method.lower() == 'nroot':
         ds = nroot(d,p=par['p'])
     elif method.lower() == 'selective':
         ds = selective(d,cc_min=par['cc_min'],epsilon=par['epsilon'],maxstep=par['maxstep'],
-                stat=par['stat'])
+                stat=par['stat'],ref=par['ref'],win=par["win"])
     elif method.lower() == 'cluster':
         ds = clusterstack(d,t=par['t'],axis=par['axis'],normalize=par['normalize'],plot=par['plot'])
     #
@@ -58,7 +59,7 @@ def seisstack(d,method,par=None):
     """
     return stack(d,method=method,par=par)
 
-def robust(d,epsilon=1E-5,maxstep=10,win=None,stat=False):
+def robust(d,epsilon=1E-5,maxstep=10,win=None,stat=False,ref=None):
     """
     this is a robust stacking algorithm described in Pavlis and Vernon 2010. Generalized
     by Xiaotao Yang.
@@ -70,6 +71,7 @@ def robust(d,epsilon=1E-5,maxstep=10,win=None,stat=False):
     maxstep: maximum iterations. default 10.
     win: [start_index,end_index] used to compute the weight, instead of the entire trace. Default None.
             When None, use the entire trace.
+    ref: reference stack, with the same length as individual data. Default: None. Use median().
     RETURNS:
     ----------------------
     newstack: numpy vector contains the stacked cross correlation
@@ -83,7 +85,10 @@ def robust(d,epsilon=1E-5,maxstep=10,win=None,stat=False):
     res  = 9E9  # residuals
     w = np.ones(d.shape[0])
     nstep=0
-    newstack = np.median(d,axis=0)
+    if ref is None:
+        newstack = np.median(d,axis=0)
+    else:
+        newstack = ref
     if win is None:
         win=[0,-1]
     while res > epsilon and nstep <=maxstep:
@@ -227,7 +232,7 @@ def nroot(d,p=2):
     return newstack
 
 
-def selective(d,cc_min,epsilon=1E-5,maxstep=10,stat=False):
+def selective(d,cc_min,epsilon=1E-5,maxstep=10,win=None,stat=False,ref=None):
     '''
     this is a selective stacking algorithm developed by Jared Bryan/Kurama Okubo.
 
@@ -236,7 +241,11 @@ def selective(d,cc_min,epsilon=1E-5,maxstep=10,stat=False):
     d: numpy.ndarray contains the 2D cross correlation matrix
     epsilon: residual threhold to quit the iteration
     cc_min: numpy.float, threshold of correlation coefficient to be selected
-
+    epsilon: residual threhold to quit the iteration (a small number). Default 1E-5
+    maxstep: maximum iterations. default 10.
+    win: [start_index,end_index] used to compute the weight, instead of the entire trace. Default None.
+            When None, use the entire trace.
+    ref: reference stack, with the same length as individual data. Default: None. Use mean().
     RETURNS:
     ----------------------
     newstack: numpy vector contains the stacked cross correlation
@@ -252,13 +261,18 @@ def selective(d,cc_min,epsilon=1E-5,maxstep=10,stat=False):
 
     res  = 9E9  # residuals
     cof  = np.zeros(N,dtype=np.float32)
-    newstack = np.mean(d,axis=0)
+    if ref is None:
+        newstack = np.mean(d,axis=0)
+    else:
+        newstack = ref
 
     nstep = 0
+    if win is None:
+        win=[0,-1]
     # start iteration
     while res>epsilon and nstep<=maxstep:
         for ii in range(N):
-            cof[ii] = np.corrcoef(newstack, d[ii,:])[0, 1]
+            cof[ii] = np.corrcoef(newstack[win[0]:win[1]], d[ii,win[0]:win[1]])[0, 1]
 
         # find good waveforms
         indx = np.where(cof>=cc_min)[0]
