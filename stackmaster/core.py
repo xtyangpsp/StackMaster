@@ -26,7 +26,7 @@ def stack(d,method,par=None):
     if method not in method_list:
         raise ValueError("$s not recoganized. use one of $s"%(method,str(method_list)))
     par0={"axis":0,"p":2,"g":1,"cc_min":0.0,"epsilon":1E-5,"maxstep":10,
-            "win":None,"stat":False,"t":0.75,'plot':False,'normalize':True,'ref':None}  #stat: if true, will return statistics.
+            "win":None,"stat":False,"h":0.75,'plot':False,'normalize':True,'ref':None}  #stat: if true, will return statistics.
     if par is None:
         par=par0
     else:
@@ -49,7 +49,8 @@ def stack(d,method,par=None):
         ds = selective(d,cc_min=par['cc_min'],epsilon=par['epsilon'],maxstep=par['maxstep'],
                 stat=par['stat'],ref=par['ref'],win=par["win"])
     elif method.lower() == 'cluster':
-        ds = clusterstack(d,t=par['t'],axis=par['axis'],normalize=par['normalize'],plot=par['plot'])
+        ds = clusterstack(d,h=par['h'],axis=par['axis'],win=par["win"],
+        normalize=par['normalize'],plot=par['plot'])
     #
     return ds
 
@@ -286,7 +287,7 @@ def selective(d,cc_min,epsilon=1E-5,maxstep=10,win=None,stat=False,ref=None):
     else:
         return newstack
 #
-def clusterstack(d,t=0.75,axis=0,normalize=True,plot=False):
+def clusterstack(d,h=0.75,win=None,axis=0,normalize=True,plot=False):
     '''
     Performs stack after clustering. The data will be clustered into two groups.
     If the two centers of the clusters are similar (defined by corrcoef >= "t"), the original
@@ -297,7 +298,9 @@ def clusterstack(d,t=0.75,axis=0,normalize=True,plot=False):
     PARAMETERS:
     ---------------------
     d: N length array of time series data (numpy.ndarray)
-    t: corrcoeff threshold to decide which group/cluster to use. Default 0.75.
+    h: corrcoeff threshold to decide which group/cluster to use. Default 0.75.
+    win: [start_index,end_index] used to compute the weight, instead of the entire trace. Default None.
+            When None, use the entire trace.
     axis: which axis to stack. default 0.
     normalize: Normalize the traces before clustering. This will only influence the cluster.
             The final stack will be produced using the original data.
@@ -326,11 +329,13 @@ def clusterstack(d,t=0.75,axis=0,normalize=True,plot=False):
     snr_all=[]
     centers_all=[]
     cidx=[]
+    if win is None:
+        win=[0,-1]
     for yi in range(ncluster):
         cidx.append(np.where((y_pred==yi))[0])
         center=km.cluster_centers_[yi].ravel()#np.squeeze(np.mean(ts[y_pred == yi].T,axis=2))
         centers_all.append(center)
-        snr=np.max(np.abs(center))/rms(np.abs(center))
+        snr=np.max(np.abs(center[win[0]:win[1]]))/rms(np.abs(center))
         snr_all.append(snr)
 
     #
@@ -343,7 +348,7 @@ def clusterstack(d,t=0.75,axis=0,normalize=True,plot=False):
             plt.title('Cluster %d: %d'%(yi+1,len(cidx[yi])))
         plt.show()
     cc=np.corrcoef(centers_all[0],centers_all[1])[0,1]
-    if cc>= t: #use all data
+    if cc>= h: #use all data
         snr_normalize=snr_all/np.sum(snr_all)
         newstack=np.zeros((M))
         for yi in range(ncluster):

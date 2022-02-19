@@ -2,7 +2,7 @@ Changes in v1.1.0
 
 CORE
 1. In robust() and selective(), added option to specify reference stack.
-2. In selective(), added option to specify window of interest [index_start,index_end]
+2. In selective() and clusterstack(), added option to specify window of interest [index_start,index_end]
 
 ==============================
 v1.0.3
