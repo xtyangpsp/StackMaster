@@ -14,7 +14,7 @@ This package is under active development. The currently available modules are li
 2. `core`: This module contains core stacking functions.
 
 ## Installation
-1. Install `stackmaster` package functions using `pip`
+1. Install `stackmaster` package functions using `pip`. We recommend installing `stackmaster` in a virtual environment.
 
 ```
 $ pip install stackmaster

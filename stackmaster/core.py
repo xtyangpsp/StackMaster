@@ -6,6 +6,7 @@ from scipy.fftpack import fft,ifft,next_fast_len
 from stockwell import st
 from tslearn.utils import to_time_series_dataset
 from tslearn.clustering import TimeSeriesKMeans
+from stackmaster import utils
 """
 Stacking functions.
 """
@@ -56,7 +57,7 @@ def stack(d,method,par=None):
 
 def seisstack(d,method,par=None):
     """
-    This is the same as stack(), to be compatible with old call in SeisGo as seisstack().
+    This is the same as stack(), to be compatible with old usage.
     """
     return stack(d,method=method,par=par)
 
@@ -335,7 +336,7 @@ def clusterstack(d,h=0.75,win=None,axis=0,normalize=True,plot=False):
         cidx.append(np.where((y_pred==yi))[0])
         center=km.cluster_centers_[yi].ravel()#np.squeeze(np.mean(ts[y_pred == yi].T,axis=2))
         centers_all.append(center)
-        snr=np.max(np.abs(center[win[0]:win[1]]))/rms(np.abs(center))
+        snr=np.max(np.abs(center[win[0]:win[1]]))/utils.rms(np.abs(center))
         snr_all.append(snr)
 
     #
@@ -406,11 +407,3 @@ def tfpws(d,p=2,axis=0):
     newstack=st.ist(pwstock)
     #
     return newstack
-
-
-
-###################
-#####Utility functions#####
-################
-def rms(d):
-    return np.sqrt(np.mean(d**2))
