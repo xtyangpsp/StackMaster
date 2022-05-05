@@ -1,3 +1,8 @@
+Changes in v1.1.1
+1. robust: fixed a bug when a few traces have very small amplitudes (anomalously small),
+  which will result in zeros in ri_norm.
+
+===============================
 Changes in v1.1.0
 
 CORE
