@@ -477,7 +477,16 @@ class DOST:
             self.data=self.pad(data)
 
     def pad(self,data):
-        """Zero pad data such that its length is a power of 2"""
+        """Zero pad data such that its length is a power of 2
+
+        PARAMETERS:
+        ---------------------
+        data: array of time series data (numpy.ndarray)
+
+        RETURNS:
+        ---------------------
+        data: zero-padded array of time series data (numpy.ndarray)
+        """
         N=int(2**np.ceil(np.log2(len(data))))
         pad_end=np.zeros(int(N-len(data)))
         data=np.concatenate((data,pad_end))
@@ -485,30 +494,67 @@ class DOST:
         return data
 
     def fourier(self, d):
-        """Normalize and center fft"""
+        """Normalized and centered fft
+
+        PARAMETERS:
+        ---------------------
+        d: array of time series data (numpy.ndarray)
+
+        RETURNS:
+        ---------------------
+        fftIn: array of frequency-domain data (numpy.ndarray)
+        """
         fftIn=(1/np.sqrt(len(d))) * np.fft.fftshift(np.fft.fft(np.fft.ifftshift(d)))
         return fftIn
 
     def ifourier(self,d):
-        """Normalize and center ifft"""
+        """Normalized and centered ifft
+        
+        PARAMETERS:
+        ---------------------
+        d: array of frequency-domain data (numpy.ndarray)
+
+        RETURNS:
+        ---------------------
+        ifftIn: array of time series data (numpy.ndarray)
+        """
         ifftIn=np.sqrt(len(d)) * np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(d)))
         return ifftIn
 
     def dostbw(self,D):
-        """Calculate size of the DOST bandwidths"""
-        arr=[0]
-        arr.extend(np.arange(np.log2(D)-2, -1e-9, -1))
-        arr.extend([0])
-        arr.extend(np.arange(0, np.log2(D)-2+1e-9))
-        arr=2**np.array(arr)
-        return arr
+        """Calculate size of the DOST bandwidths
+
+        PARAMETERS:
+        ---------------------
+        D: length of time-series data (int)
+
+        RETURNS:
+        ---------------------
+        bw: list of DOST bandwidths
+        """
+        bw=[0]
+        bw.extend(np.arange(np.log2(D)-2, -1e-9, -1))
+        bw.extend([0])
+        bw.extend(np.arange(0, np.log2(D)-2+1e-9))
+        bw=2**np.array(bw)
+        return bw
 
     def dost(self,d):
-        """Discrete Orthonormal Stockwell Transform"""
+        """Discrete Orthonormal Stockwell Transform
+
+        PARAMETERS:
+        ---------------------
+        d: array of time-series data (numpy.ndarray)
+
+        RETURNS:
+        ---------------------
+        d_dost: array of DOST coefficients (numpy.ndarray)
+        """
         d_dost=self.fourier(d)
         D=len(d)
         bw=self.dostbw(D)
         k=0
+        # heuristically, this is a short-time fourier transform with a frequency-dependent bandwidth
         for i in bw:
             i=int(i)
             if i==1:
@@ -519,7 +565,16 @@ class DOST:
         return d_dost
 
     def idost(self,d):
-        """Inverse Discrete Orthonormal Stockwell Transform"""
+        """Inverse Discrete Orthonormal Stockwell Transform
+
+        PARAMETERS:
+        ---------------------
+        d: array of DOST coefficients (numpy.ndarray)
+
+        RETURNS:
+        ---------------------
+        d_idost: array of time-series data (numpy.ndarray)
+        """
         d_idost=d
         D=len(d)
         bw=self.dostbw(D)
