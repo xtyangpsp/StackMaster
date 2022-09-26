@@ -23,7 +23,7 @@ def stack(d,method,par=None):
     ds: stacked data, which may be a list depending on the method.
     """
     method_list=["linear","pws","robust","acf","nroot","selective",
-            "cluster","tfpws","tfpws_fast"]
+            "cluster","tfpws","tfpws-dost"]
     if method not in method_list:
         raise ValueError("$s not recoganized. use one of $s"%(method,str(method_list)))
     par0={"axis":0,"p":2,"g":1,"cc_min":0.0,"epsilon":1E-5,"maxstep":10,
@@ -39,8 +39,8 @@ def stack(d,method,par=None):
         ds = pws(d,p=par['p'])
     elif method.lower() == 'tfpws':
         ds = tfpws(d,p=par['p'])
-    elif method.lower() == 'tfpws_fast':
-        ds = tfpws_fast(d,p=par['p'])
+    elif method.lower() == 'tfpws-dost':
+        ds = tfpws_dost(d,p=par['p'])
     elif method.lower() == 'robust':
         ds = robust(d,epsilon=par['epsilon'],maxstep=par['maxstep'],win=par["win"],
                 stat=par['stat'],ref=par['ref'])
@@ -86,32 +86,36 @@ def robust(d,epsilon=1E-5,maxstep=10,win=None,stat=False,ref=None):
     if d.ndim == 1:
         print('2D matrix is needed')
         return d
+    N,M = d.shape
     res  = 9E9  # residuals
     w = np.ones(d.shape[0])
     small_number=1E-15
     nstep=0
-    if ref is None:
-        newstack = np.median(d,axis=0)
+    if N >=2:
+        if ref is None:
+            newstack = np.median(d,axis=0)
+        else:
+            newstack = ref
+        if win is None:
+            win=[0,-1]
+        while res > epsilon and nstep <=maxstep:
+            stack = newstack
+            for i in range(d.shape[0]):
+                dtemp=d[i,win[0]:win[1]]
+                crap = np.multiply(stack[win[0]:win[1]],dtemp.T)
+                crap_dot = np.sum(crap)
+                di_norm = np.linalg.norm(dtemp)
+                ri_norm = np.linalg.norm(dtemp -  crap_dot*stack[win[0]:win[1]])
+                if ri_norm < small_number:
+                    w[i]=0
+                else:
+                    w[i]  = np.abs(crap_dot) /di_norm/ri_norm
+            w =w /np.sum(w)
+            newstack =np.sum( (w*d.T).T,axis=0)#/len(cc_array[:,1])
+            res = np.linalg.norm(newstack-stack,ord=1)/np.linalg.norm(newstack)/len(d[:,1])
+            nstep +=1
     else:
-        newstack = ref
-    if win is None:
-        win=[0,-1]
-    while res > epsilon and nstep <=maxstep:
-        stack = newstack
-        for i in range(d.shape[0]):
-            dtemp=d[i,win[0]:win[1]]
-            crap = np.multiply(stack[win[0]:win[1]],dtemp.T)
-            crap_dot = np.sum(crap)
-            di_norm = np.linalg.norm(dtemp)
-            ri_norm = np.linalg.norm(dtemp -  crap_dot*stack[win[0]:win[1]])
-            if ri_norm < small_number:
-                w[i]=0
-            else:
-                w[i]  = np.abs(crap_dot) /di_norm/ri_norm
-        w =w /np.sum(w)
-        newstack =np.sum( (w*d.T).T,axis=0)#/len(cc_array[:,1])
-        res = np.linalg.norm(newstack-stack,ord=1)/np.linalg.norm(newstack)/len(d[:,1])
-        nstep +=1
+        newstack=d[0].copy()
     if stat:
         return newstack, w, nstep
     else:
@@ -137,34 +141,36 @@ def adaptive_filter(d,g=1):
         print('2D matrix is needed')
         return d
     N,M = d.shape
-    Nfft = next_fast_len(M)
+    if N>=2:
+        Nfft = next_fast_len(M)
 
-    # fft the 2D array
-    spec = fft(d,axis=1,n=Nfft)[:,:M]
+        # fft the 2D array
+        spec = fft(d,axis=1,n=Nfft)[:,:M]
 
-    # make cross-spectrm matrix
-    cspec = np.zeros(shape=(N*N,M),dtype=np.complex64)
-    for ii in range(N):
-        for jj in range(N):
-            kk = ii*N+jj
-            cspec[kk] = spec[ii]*np.conjugate(spec[jj])
+        # make cross-spectrm matrix
+        cspec = np.zeros(shape=(N*N,M),dtype=np.complex64)
+        for ii in range(N):
+            for jj in range(N):
+                kk = ii*N+jj
+                cspec[kk] = spec[ii]*np.conjugate(spec[jj])
 
-    S1 = np.zeros(M,dtype=np.complex64)
-    S2 = np.zeros(M,dtype=np.complex64)
-    # construct the filter P
-    for ii in range(N):
-        mm = ii*N+ii
-        S2 += cspec[mm]
-        for jj in range(N):
-            kk = ii*N+jj
-            S1 += cspec[kk]
+        S1 = np.zeros(M,dtype=np.complex64)
+        S2 = np.zeros(M,dtype=np.complex64)
+        # construct the filter P
+        for ii in range(N):
+            mm = ii*N+ii
+            S2 += cspec[mm]
+            for jj in range(N):
+                kk = ii*N+jj
+                S1 += cspec[kk]
 
-    p = np.power((S1-S2)/(S2*(N-1)),g)
+        p = np.power((S1-S2)/(S2*(N-1)),g)
 
-    # make ifft
-    narr = np.real(ifft(np.multiply(p,spec),Nfft,axis=1)[:,:M])
-    newstack=np.mean(narr,axis=0)
-
+        # make ifft
+        narr = np.real(ifft(np.multiply(p,spec),Nfft,axis=1)[:,:M])
+        newstack=np.mean(narr,axis=0)
+    else:
+        newstack=d[0].copy()
     #
     return newstack
 
@@ -194,14 +200,17 @@ def pws(d,p=2):
         print('2D matrix is needed')
         return d
     N,M = d.shape
-    analytic = hilbert(d,axis=1, N=next_fast_len(M))[:,:M]
-    phase = np.angle(analytic)
-    phase_stack = np.mean(np.exp(1j*phase),axis=0)
-    phase_stack = np.abs(phase_stack)**(p)
+    if N >=2:
+        analytic = hilbert(d,axis=1, N=next_fast_len(M))[:,:M]
+        phase = np.angle(analytic)
+        phase_stack = np.mean(np.exp(1j*phase),axis=0)
+        phase_stack = np.abs(phase_stack)**(p)
 
-    weighted = np.multiply(d,phase_stack)
+        weighted = np.multiply(d,phase_stack)
 
-    newstack=np.mean(weighted,axis=0)
+        newstack=np.mean(weighted,axis=0)
+    else:
+        newstack=d[0].copy()
     return newstack
 
 def nroot(d,p=2):
@@ -225,16 +234,19 @@ def nroot(d,p=2):
         print('2D matrix is needed for nroot_stack')
         return d
     N,M = d.shape
-    dout = np.zeros(M,dtype=np.float32)
+    if N >=2:
+        dout = np.zeros(M,dtype=np.float32)
 
-    # construct y
-    for ii in range(N):
-        dat = d[ii,:]
-        dout += np.sign(dat)*np.abs(dat)**(1/p)
-    dout /= N
+        # construct y
+        for ii in range(N):
+            dat = d[ii,:]
+            dout += np.sign(dat)*np.abs(dat)**(1/p)
+        dout /= N
 
-    # the final stacked waveform
-    newstack = dout*np.abs(dout)**(p-1)
+        # the final stacked waveform
+        newstack = dout*np.abs(dout)**(p-1)
+    else:
+        newstack=d[0].copy()
 
     return newstack
 
@@ -265,29 +277,36 @@ def selective(d,cc_min,epsilon=1E-5,maxstep=10,win=None,stat=False,ref=None):
         print('2D matrix is needed for selective stacking')
         return d
     N,M = d.shape
+    if N>=2:
+        res  = 9E9  # residuals
+        cof  = np.zeros(N,dtype=np.float32)
+        if ref is None:
+            newstack = np.mean(d,axis=0)
+        else:
+            newstack = ref
 
-    res  = 9E9  # residuals
-    cof  = np.zeros(N,dtype=np.float32)
-    if ref is None:
-        newstack = np.mean(d,axis=0)
+        nstep = 0
+        if win is None:
+            win=[0,-1]
+        # start iteration
+        while res>epsilon and nstep<=maxstep:
+            for ii in range(N):
+                cof[ii] = np.corrcoef(newstack[win[0]:win[1]], d[ii,win[0]:win[1]])[0, 1]
+
+            # find good waveforms
+            indx = np.where(cof>=cc_min)[0]
+            nstep +=1
+            if not len(indx):
+                newstack=np.ndarray((d.shape[1],))
+                newstack.fill(np.nan)
+                print('cannot find good waveforms inside selective stacking')
+                break
+            else:
+                oldstack = newstack
+                newstack = np.mean(d[indx],axis=0)
+                res = np.linalg.norm(newstack-oldstack)/(np.linalg.norm(newstack)*M)
     else:
-        newstack = ref
-
-    nstep = 0
-    if win is None:
-        win=[0,-1]
-    # start iteration
-    while res>epsilon and nstep<=maxstep:
-        for ii in range(N):
-            cof[ii] = np.corrcoef(newstack[win[0]:win[1]], d[ii,win[0]:win[1]])[0, 1]
-
-        # find good waveforms
-        indx = np.where(cof>=cc_min)[0]
-        if not len(indx): raise ValueError('cannot find good waveforms inside selective stacking')
-        oldstack = newstack
-        newstack = np.mean(d[indx],axis=0)
-        res = np.linalg.norm(newstack-oldstack)/(np.linalg.norm(newstack)*M)
-        nstep +=1
+        newstack=d[0].copy()
     if stat:
         return newstack, nstep
     else:
@@ -317,52 +336,56 @@ def clusterstack(d,h=0.75,win=None,axis=0,normalize=True,plot=False):
     newstack: final stack.
     '''
     ncluster=2 #DO NOT change this value.
+    min_trace=2 #minimum of two traces.
     metric="euclidean" #matric to compute the distance in kmeans clustering.
     if d.ndim == 1:
         print('2D matrix is needed')
         return d
     N,M = d.shape
-    dataN=d.copy()
-    if normalize:
-        for i in range(N):
-            dataN[i]=d[i]/np.max(np.abs(d[i]),axis=0)
+    if N >= min_trace:
+        dataN=d.copy()
+        if normalize:
+            for i in range(N):
+                dataN[i]=d[i]/np.max(np.abs(d[i]),axis=0)
 
-    ts = to_time_series_dataset(dataN)
+        ts = to_time_series_dataset(dataN)
 
-    km = TimeSeriesKMeans(n_clusters=ncluster, n_jobs=1,metric=metric, verbose=False,
-                          max_iter_barycenter=100, random_state=0)
-    y_pred = km.fit_predict(ts)
-    snr_all=[]
-    centers_all=[]
-    cidx=[]
-    if win is None:
-        win=[0,-1]
-    for yi in range(ncluster):
-        cidx.append(np.where((y_pred==yi))[0])
-        center=km.cluster_centers_[yi].ravel()#np.squeeze(np.mean(ts[y_pred == yi].T,axis=2))
-        centers_all.append(center)
-        snr=np.max(np.abs(center[win[0]:win[1]]))/utils.rms(np.abs(center))
-        snr_all.append(snr)
-
-    #
-    if plot:
-        plt.figure(figsize=(12,4))
+        km = TimeSeriesKMeans(n_clusters=ncluster, n_jobs=1,metric=metric, verbose=False,
+                              max_iter_barycenter=100, random_state=0)
+        y_pred = km.fit_predict(ts)
+        snr_all=[]
+        centers_all=[]
+        cidx=[]
+        if win is None:
+            win=[0,-1]
         for yi in range(ncluster):
-            plt.subplot(1,ncluster,yi+1)
-            plt.plot(np.squeeze(ts[cidx[yi]].T),'k-',alpha=0.3)
-            plt.plot(centers_all[yi],'r-')
-            plt.title('Cluster %d: %d'%(yi+1,len(cidx[yi])))
-        plt.show()
-    cc=np.corrcoef(centers_all[0],centers_all[1])[0,1]
-    if cc>= h: #use all data
-        snr_normalize=snr_all/np.sum(snr_all)
-        newstack=np.zeros((M))
-        for yi in range(ncluster):
-            newstack += snr_normalize[yi]*np.mean(d[cidx[yi]],axis=0)
+            cidx.append(np.where((y_pred==yi))[0])
+            center=km.cluster_centers_[yi].ravel()#np.squeeze(np.mean(ts[y_pred == yi].T,axis=2))
+            centers_all.append(center)
+            snr=np.max(np.abs(center[win[0]:win[1]]))/utils.rms(np.abs(center))
+            snr_all.append(snr)
+
+        #
+        if plot:
+            plt.figure(figsize=(12,4))
+            for yi in range(ncluster):
+                plt.subplot(1,ncluster,yi+1)
+                plt.plot(np.squeeze(ts[cidx[yi]].T),'k-',alpha=0.3)
+                plt.plot(centers_all[yi],'r-')
+                plt.title('Cluster %d: %d'%(yi+1,len(cidx[yi])))
+            plt.show()
+        cc=np.corrcoef(centers_all[0],centers_all[1])[0,1]
+        if cc>= h: #use all data
+            snr_normalize=snr_all/np.sum(snr_all)
+            newstack=np.zeros((M))
+            for yi in range(ncluster):
+                newstack += snr_normalize[yi]*np.mean(d[cidx[yi]],axis=0)
+        else:
+            goodidx=np.argmax(snr_all)
+            newstack=np.mean(d[cidx[goodidx]],axis=0)
+        del dataN,ts,y_pred
     else:
-        goodidx=np.argmax(snr_all)
-        newstack=np.mean(d[cidx[goodidx]],axis=0)
-    del dataN,ts,y_pred
+        newstack=d[0].copy()
     #
     return newstack
 
@@ -371,7 +394,7 @@ def tfpws(d,p=2,axis=0):
     Performs time-frequency domain phase-weighted stack on array of time series.
 
     $C_{ps} = |(\sum{S*e^{i2\pi}/|S|})/M|^p$, where $C_{ps}$ is the phase weight. Then
-    $S_{pws} = C_{ps}*S_{ls}$, where $S_{ls}$ is the S transform of the linear stack
+    $S_{pws} = C_{ps}*S_{ls}$, where $S_{ls}$ is the S transform of the linea stack
     of the whole data.
 
     Reference:
@@ -384,6 +407,7 @@ def tfpws(d,p=2,axis=0):
     ---------------------
     d: N length array of time series data (numpy.ndarray)
     p: exponent for phase stack (int). default is 2
+    axis: axis to stack, default is 0.
 
     RETURNS:
     ---------------------
@@ -393,44 +417,55 @@ def tfpws(d,p=2,axis=0):
         print('2D matrix is needed')
         return d
     N,M = d.shape
+    if N >=2:
+        lstack=np.mean(d,axis=axis)
+        #get the ST of the linear stack first
+        stock_ls=st.st(utils.power2pad(lstack))
 
-    #get the ST of the linear stack first
-    lstack=np.mean(d,axis=axis)
-    stock_ls=st.st(lstack)
+        #run a ST to get the dimension of ST result
+        stock_temp=st.st(utils.power2pad(d[0]))
+        phase_stack=np.zeros((stock_temp.shape[0],stock_temp.shape[1]),dtype='complex128')
+        for i in range(N):
+            if i>0: #zero index has been computed.
+                stock_temp=st.st(utils.power2pad(d[i]))
+            phase_stack += np.multiply(stock_temp,np.angle(stock_temp))/np.abs(stock_temp)
+        #
+        phase_stack = np.abs(phase_stack/N)**p
 
-    #run a ST to get the dimension of ST result
-    stock_temp=st.st(d[0])
-    phase_stack=np.zeros((stock_temp.shape[0],stock_temp.shape[1]),dtype='complex128')
-    for i in range(N):
-        if i>0: #zero index has been computed.
-            stock_temp=st.st(d[i])
-        phase_stack += np.multiply(stock_temp,np.angle(stock_temp))/np.abs(stock_temp)
-    #
-    phase_stack = np.abs(phase_stack/N)**p
-
-    pwstock=np.multiply(phase_stack,stock_ls)
-    newstack=st.ist(pwstock)
+        pwstock=np.multiply(phase_stack,stock_ls)
+        recdostIn=np.real(st.ist(pwstock))
+        newstack=recdostIn[:M] # trim padding
+    else:
+        newstack=d[0].copy()
     #
     return newstack
 
-def tfpws_fast(d,p=2,axis=0):
+def tfpws_dost(d,p=2,axis=0):
     '''
-    Performs time-frequency domain phase-weighted stack on array of time series.
-
+    Performs time-frequency domain phase-weighted stack on array of time series using DOST (Discrete
+    orthogonal stockwell transform).
     $C_{ps} = |(\sum{S*e^{i2\pi}/|S|})/M|^p$, where $C_{ps}$ is the phase weight. Then
-    $S_{pws} = C_{ps}*S_{ls}$, where $S_{ls}$ is the Discrete Orthonormal S transform 
-    of the linear stack of the whole data.
+	$S_{pws} = C_{ps}*S_{ls}$, where $S_{ls}$ is the Discrete Orthonormal S transform
+	of the linear stack of the whole data.
 
-    Reference:
-    U. Battisti, L. Riba, "Window-dependent bases for efficient representations of the 
-    Stockwell transform", Applied and Computational Harmonic Analysis, 23 February 2015,
-    http://dx.doi.org/10.1016/j.acha.2015.02.002.
+    DOST stacking was implemented by Jared Bryan.
 
+    Reference for tf-PWS:
+    Schimmel, M., Stutzmann, E., & Gallart, J. (2011). Using instantaneous phase
+    coherence for signal extraction from ambient noise data at a local to a
+    global scale. Geophysical Journal International, 184(1), 494–506.
+    https://doi.org/10.1111/j.1365-246X.2010.04861.x
+
+    Reference for DOST:
+    U. Battisti, L. Riba, "Window-dependent bases for efficient representations of the
+	Stockwell transform", Applied and Computational Harmonic Analysis, 23 February 2015,
+	http://dx.doi.org/10.1016/j.acha.2015.02.002.
 
     PARAMETERS:
     ---------------------
     d: N length array of time series data (numpy.ndarray)
     p: exponent for phase stack (int). default is 2
+    axis: axis to stack, default is 0.
 
     RETURNS:
     ---------------------
@@ -440,31 +475,33 @@ def tfpws_fast(d,p=2,axis=0):
         print('2D matrix is needed')
         return d
     N,M = d.shape
+    if N >=2:
+        lstack=np.mean(d,axis=axis)
+        #get the dost of the linear stack first
+        stock_ls_dost=DOST(lstack) # initialize dost object
+        stock_ls=stock_ls_dost.dost(stock_ls_dost.data) # calculate the dost
 
-    #get the dost of the linear stack first
-    lstack=np.mean(d,axis=axis)
-    stock_ls_dost=DOST(lstack) # initialize dost object
-    stock_ls=stock_ls_dost.dost(stock_ls_dost.data) # calculate the dost
+    	# calculate dost for first trace to know its shape
+        stock_dost=DOST(d[0])
+        stock_temp=stock_dost.dost(stock_dost.data)
+    	# initialize stack
+        phase_stack=np.zeros(len(stock_temp),dtype='complex128')
+    	# calculate the dost for each trace to be stacked
+        for i in range(d.shape[0]):
+        	if i>0: # zero index has been computed
+        		stock_dost=DOST(d[i])
+        		stock_temp=stock_dost.dost(stock_dost.data)
+        	phase_stack+=np.multiply(stock_temp,np.angle(stock_temp))/np.abs(stock_temp)
 
-    # calculate dost for first trace to know its shape
-    stock_dost=DOST(d[0])
-    stock_temp=stock_dost.dost(stock_dost.data)
-    # initialize stack
-    phase_stack=np.zeros(len(stock_temp),dtype='complex128')
-    # calculate the dost for each trace to be stacked
-    for i in range(d.shape[0]):
-        if i>0: # zero index has been computed
-            stock_dost=DOST(d[i])
-            stock_temp=stock_dost.dost(stock_dost.data)
-        phase_stack+=np.multiply(stock_temp,np.angle(stock_temp))/np.abs(stock_temp)
+        phase_stack = np.abs(phase_stack/N)**p
 
-    phase_stack = np.abs(phase_stack/N)**p
-
-    pwstock=np.multiply(phase_stack,stock_ls)
-    recdostIn = stock_dost.idost(pwstock)
-    recdostIn = recdostIn[:M] # trim padding
-
-    return recdostIn
+        pwstock=np.multiply(phase_stack,stock_ls)
+        recdostIn = np.real(stock_dost.idost(pwstock))
+        newstack = recdostIn[:M] # trim padding
+    else:
+        newstack=d[0].copy()
+    #
+    return newstack
 
 class DOST:
     def __init__(self, data):
@@ -509,7 +546,7 @@ class DOST:
 
     def ifourier(self,d):
         """Normalized and centered ifft
-        
+
         PARAMETERS:
         ---------------------
         d: array of frequency-domain data (numpy.ndarray)
