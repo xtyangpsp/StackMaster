@@ -1,3 +1,10 @@
+Changes in v1.2.0
+1. Added tfpws_dost() as a faster tfpws method, implemented by Jared Bryan.
+2. Added handles for only 1 trace.
+3. Added DOST class in core module.
+4. Added power2pad() to pad zeros for closest power of 2 length.
+
+=========================
 Changes in v1.1.1
 1. robust: fixed a bug when a few traces have very small amplitudes (anomalously small),
   which will result in zeros in ri_norm.
