@@ -4,7 +4,7 @@
 ![plot1](/figs/stackmaster_logo.png)
 
 ## Introduction
-A collection of methods for stacking of generic time series data.
+A collection of methods for stacking of generic time series data. See Yang et al. (2022)[https://academic.oup.com/gji/article/232/3/1600/6762921] for methods validation and comparison.
 
 ## Available modules
 This package is under active development. The currently available modules are listed here.
@@ -91,4 +91,4 @@ Any bugs and ideas are welcome. Please file an issue through GitHub https://gith
 
 
 ## References
-* To be added.
+* Yang, X., Bryan, J., Okubo, K., Jiang, C., Clements, T., & Denolle, M. A. (2022). Optimal stacking of noise cross-correlation functions. Geophysical Journal International, 232(3), 1600–1618. https://doi.org/10.1093/gji/ggac410
