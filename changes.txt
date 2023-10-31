@@ -1,3 +1,9 @@
+Changes in v1.2.1
+1. stack: discard NaN traces before passing the data to each method.
+2. robust: fixed a bug when outlier traces have huge amplitudes, which would cause the dot product 
+  and L2 norms too large to be handeled by the system. The final stack will be scaled back.
+
+========================
 Changes in v1.2.0
 1. Added tfpws_dost() as a faster tfpws method, implemented by Jared Bryan.
 2. Added handles for only 1 trace.
