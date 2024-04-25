@@ -6,6 +6,16 @@
 ## Introduction
 A collection of methods for stacking of generic time series data. See Yang et al. (2022)[https://academic.oup.com/gji/article/232/3/1600/6762921] for methods validation and comparison.
 
+## Citation
+Please cite Yang et al. (2022)[https://academic.oup.com/gji/article/232/3/1600/6762921] if you used `stackmaster` functions in your research/publications.
+
+## Folders/directories
+1. `Matlab`: MATLAB implementations of the stacking methods. **NOTE**: tf-PWS in MATLAB is not ready yet and may produce unexpected stacking results.
+2. `stackmaster`: root directory of the `stackmaster` codes in Python.
+3. `data`: example data for test run.
+4. `figs`: figures used in this README file.
+5. `notebooks`: example notebooks to use the functions.  
+
 ## Available modules
 This package is under active development. The currently available modules are listed here.
 
